@@ -20,28 +20,42 @@ export function provideHandleTransaction(transferEvent: string): HandleTransacti
     for (const log of transferLogs) {
       const { _from, _to, _value } = log.args
       if(log.address.toLowerCase() === DAI_ADDR){
-        if(_to.toLowerCase() == ARBITRUM_L1_ESCROW.toLowerCase() || _to.toLowerCase() == OPTIMISM_L1_ESCROW.toLowerCase()){
+        if(_to.toLowerCase() === ARBITRUM_L1_ESCROW.toLowerCase() || _to.toLowerCase() === OPTIMISM_L1_ESCROW.toLowerCase()){
           let {optBalance, arbBalance} = await escrowsBalance()
           let arbSupply = await arbitrumSupply()
           let optSupply = await optimismSupply()
-  
-          if(optBalance >= optSupply || arbBalance >= arbSupply) {
-            findings.push(
-              Finding.fromObject({
-                name: "Invariant monitor",
-                description: "Emits an alert when the invariant is violated",
-                alertId: "INVARIANT-MONITOR",
-                severity: FindingSeverity.Info,
-                type: FindingType.Info,
-                protocol: "MakerDAO",
-                metadata: {
-                  escrowAddress: _to.toLowerCase() === ARBITRUM_L1_ESCROW.toLowerCase() ? ARBITRUM_L1_ESCROW.toLowerCase() : OPTIMISM_L1_ESCROW.toLowerCase(),
-                  L2Network: _to.toLowerCase() === ARBITRUM_L1_ESCROW.toLowerCase() ? "ARBITRUM" : "OPTIMISM",
-                  exceededBy: _to.toLowerCase() === ARBITRUM_L1_ESCROW.toLowerCase() ? (arbBalance - arbSupply).toString() : (optBalance - optSupply).toString()
-                },
-              })
-            );
+          let escrowAddr: string = ""
+          let l2Network: string = ""
+          let exceededAmount: string = ""
+          let violated: string = ""
+          if(_to.toLowerCase() === ARBITRUM_L1_ESCROW.toLowerCase()){
+            escrowAddr = ARBITRUM_L1_ESCROW.toLowerCase()
+            l2Network = "ARBITRUM"
+            exceededAmount = (arbBalance - arbSupply).toString()
+            violated = optBalance >= optSupply ? "true" : "false"
+          } else if(_to.toLowerCase() === OPTIMISM_L1_ESCROW.toLowerCase()){
+            escrowAddr = OPTIMISM_L1_ESCROW.toLowerCase()
+            l2Network = "OPTIMISM"
+            exceededAmount = (optBalance - optSupply).toString()
+            violated = arbBalance >= arbSupply ? "true" : "false"
           }
+
+          findings.push(
+            Finding.fromObject({
+              name: "Invariant monitor",
+              description: "Emits an alert when a transfer event is emited and check if the invariante was violated",
+              alertId: "INVARIANT-MONITOR",
+              severity: FindingSeverity.Info,
+              type: FindingType.Info,
+              protocol: "MakerDAO",
+              metadata: {
+                violated: violated,
+                escrowAddress: escrowAddr,
+                L2Network: l2Network,
+                amount: exceededAmount
+              },
+            })
+          );
         }
       }      
     }
