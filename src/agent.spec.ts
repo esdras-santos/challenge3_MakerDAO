@@ -1,16 +1,41 @@
 import { FindingType, FindingSeverity, Finding, HandleTransaction } from "forta-agent";
 import { Interface } from "ethers/lib/utils";
 import { provideHandleTransaction } from "./agent";
-import { DAI_ADDR, TRANSFER_EVENT } from "./utils";
+import { ARBITRUM_L1_ESCROW, DAI_ADDR, OPTIMISM_L1_ESCROW, TRANSFER_EVENT } from "./utils";
 import { TestTransactionEvent } from "forta-agent-tools/lib/test";
 import { createAddress } from "forta-agent-tools";
+import { escrowsBalance } from "./L1DAI";
+import { arbitrumSupply, optimismSupply } from "./L2DAI";
+
 
 describe("Invariant violation monitor", () => {
   let handleTransaction: HandleTransaction;
   let events: Interface
-  let mockPool: string = createAddress("0x034")
+  let mockDAI: string = createAddress("0x034")
   
-  // do mock event
+  type mockMetadata = {
+    violated: string;
+    escrowAddress: string;
+    L2Network: string;
+    amount: string;
+  }
+
+  let mockFinding = (metadata: mockMetadata) : Finding => {
+    return Finding.fromObject({
+      name: "Invariant monitor",
+      description: "Emits an alert when a transfer event is emited and check if the invariante was violated",
+      alertId: "INVARIANT-MONITOR",
+      severity: FindingSeverity.Info,
+      type: FindingType.Info,
+      protocol: "MakerDAO",
+      metadata: {
+        violated: metadata.violated,
+        escrowAddress: metadata.escrowAddress,
+        L2Network: metadata.L2Network,
+        amount: metadata.amount
+      },
+    })
+  }
 
   beforeAll(() => {
     events = new Interface([TRANSFER_EVENT])
@@ -33,8 +58,8 @@ describe("Invariant violation monitor", () => {
 
     txEvent = new TestTransactionEvent().addEventLog(events.getEvent("Transfer"), DAI_ADDR, [
       createAddress("0x10"),
-      10,
       createAddress("0x11"),
+      10
     ]);
     findings = await handleTransaction(txEvent);
 
@@ -45,10 +70,10 @@ describe("Invariant violation monitor", () => {
     let findings: Finding[];
     let txEvent: TestTransactionEvent;
 
-    txEvent = new TestTransactionEvent().addEventLog(events.getEvent("Transfer"), mockPool, [
+    txEvent = new TestTransactionEvent().addEventLog(events.getEvent("Transfer"), mockDAI, [
       createAddress("0x10"),
-      10,
       createAddress("0x11"),
+      10
     ]);
     findings = await handleTransaction(txEvent);
 
@@ -56,11 +81,64 @@ describe("Invariant violation monitor", () => {
   })
 
   it("should return 1 finding when event is emitted by DAI and is for one of the escrows", async ()=> {
+    let {optBalance, arbBalance} = await escrowsBalance()
+    let arbSupply = await arbitrumSupply()
+    let findings: Finding[];
+    let txEvent: TestTransactionEvent;
 
+    txEvent = new TestTransactionEvent().addEventLog(events.getEvent("Transfer"), DAI_ADDR, [
+      createAddress("0x10"),
+      ARBITRUM_L1_ESCROW.toLowerCase(),
+      10
+    ]);
+    findings = await handleTransaction(txEvent);
+
+    let metadata: mockMetadata = {
+      violated: arbBalance >= arbSupply ? "true" : "false",
+      escrowAddress: ARBITRUM_L1_ESCROW.toLocaleLowerCase(),
+      L2Network: "ARBITRUM",
+      amount: (arbBalance - arbSupply).toString()
+    }
+
+    expect(findings).toStrictEqual([mockFinding(metadata)]);
   })
 
   it("should return 2 findings when event is emitted by DAI and is for both escrows", async ()=> {
-    
+    let {optBalance, arbBalance} = await escrowsBalance()
+    let arbSupply = await arbitrumSupply()
+    let optSupply = await optimismSupply()
+
+    let findings: Finding[];
+    let txEvent: TestTransactionEvent;
+
+    txEvent = new TestTransactionEvent()
+      .addEventLog(events.getEvent("Transfer"), DAI_ADDR.toLowerCase(), [
+        createAddress("0x10"),
+        ARBITRUM_L1_ESCROW.toLowerCase(),
+        10
+      ])
+      .addEventLog(events.getEvent("Transfer"), DAI_ADDR.toLowerCase(), [
+        createAddress("0x10"),
+        OPTIMISM_L1_ESCROW.toLowerCase(),
+        10
+      ])
+    findings = await handleTransaction(txEvent);
+
+    let metadata1: mockMetadata = {
+      violated: arbBalance >= arbSupply ? "true" : "false",
+      escrowAddress: ARBITRUM_L1_ESCROW.toLowerCase(),
+      L2Network: "ARBITRUM",
+      amount: (arbBalance - arbSupply).toString()
+    }
+
+    let metadata2: mockMetadata = {
+      violated: optBalance >= optSupply ? "true" : "false",
+      escrowAddress: OPTIMISM_L1_ESCROW.toLowerCase(),
+      L2Network: "OPTIMISM",
+      amount: (optBalance - optSupply).toString()
+    }
+
+    expect(findings).toStrictEqual([mockFinding(metadata1), mockFinding(metadata2)]);
   })
 
 });

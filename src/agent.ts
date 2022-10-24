@@ -19,7 +19,7 @@ export function provideHandleTransaction(transferEvent: string): HandleTransacti
 
     for (const log of transferLogs) {
       const { _from, _to, _value } = log.args
-      if(log.address.toLowerCase() === DAI_ADDR){
+      if(log.address.toLowerCase() === DAI_ADDR.toLowerCase()){
         if(_to.toLowerCase() === ARBITRUM_L1_ESCROW.toLowerCase() || _to.toLowerCase() === OPTIMISM_L1_ESCROW.toLowerCase()){
           let {optBalance, arbBalance} = await escrowsBalance()
           let arbSupply = await arbitrumSupply()
@@ -32,12 +32,12 @@ export function provideHandleTransaction(transferEvent: string): HandleTransacti
             escrowAddr = ARBITRUM_L1_ESCROW.toLowerCase()
             l2Network = "ARBITRUM"
             exceededAmount = (arbBalance - arbSupply).toString()
-            violated = optBalance >= optSupply ? "true" : "false"
+            violated = arbBalance >= arbSupply ? "true" : "false"
           } else if(_to.toLowerCase() === OPTIMISM_L1_ESCROW.toLowerCase()){
             escrowAddr = OPTIMISM_L1_ESCROW.toLowerCase()
             l2Network = "OPTIMISM"
             exceededAmount = (optBalance - optSupply).toString()
-            violated = arbBalance >= arbSupply ? "true" : "false"
+            violated = optBalance >= optSupply ? "true" : "false"
           }
 
           findings.push(
