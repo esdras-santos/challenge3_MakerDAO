@@ -52,7 +52,7 @@ export function provideHandleTransaction(transferEvent: string): HandleTransacti
                 violated: violated,
                 escrowAddress: escrowAddr,
                 L2Network: l2Network,
-                amount: exceededAmount
+                difference: exceededAmount
               },
             })
           );

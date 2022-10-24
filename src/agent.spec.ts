@@ -17,7 +17,7 @@ describe("Invariant violation monitor", () => {
     violated: string;
     escrowAddress: string;
     L2Network: string;
-    amount: string;
+    difference: string;
   }
 
   let mockFinding = (metadata: mockMetadata) : Finding => {
@@ -32,7 +32,7 @@ describe("Invariant violation monitor", () => {
         violated: metadata.violated,
         escrowAddress: metadata.escrowAddress,
         L2Network: metadata.L2Network,
-        amount: metadata.amount
+        difference: metadata.difference
       },
     })
   }
@@ -97,7 +97,7 @@ describe("Invariant violation monitor", () => {
       violated: arbBalance >= arbSupply ? "true" : "false",
       escrowAddress: ARBITRUM_L1_ESCROW.toLocaleLowerCase(),
       L2Network: "ARBITRUM",
-      amount: (arbBalance - arbSupply).toString()
+      difference: (arbBalance - arbSupply).toString()
     }
 
     expect(findings).toStrictEqual([mockFinding(metadata)]);
@@ -128,14 +128,14 @@ describe("Invariant violation monitor", () => {
       violated: arbBalance >= arbSupply ? "true" : "false",
       escrowAddress: ARBITRUM_L1_ESCROW.toLowerCase(),
       L2Network: "ARBITRUM",
-      amount: (arbBalance - arbSupply).toString()
+      difference: (arbBalance - arbSupply).toString()
     }
 
     let metadata2: mockMetadata = {
       violated: optBalance >= optSupply ? "true" : "false",
       escrowAddress: OPTIMISM_L1_ESCROW.toLowerCase(),
       L2Network: "OPTIMISM",
-      amount: (optBalance - optSupply).toString()
+      difference: (optBalance - optSupply).toString()
     }
 
     expect(findings).toStrictEqual([mockFinding(metadata1), mockFinding(metadata2)]);
