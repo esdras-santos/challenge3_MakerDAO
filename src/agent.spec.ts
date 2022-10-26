@@ -1,7 +1,7 @@
 import { FindingType, FindingSeverity, Finding, HandleTransaction } from "forta-agent";
 import { Interface } from "ethers/lib/utils";
 import { provideHandleTransaction } from "./agent";
-import { ARBITRUM_L1_ESCROW, DAI_ADDR, OPTIMISM_L1_ESCROW, TRANSFER_EVENT } from "./utils";
+import { ARBITRUM_L1_ESCROW, ARBITRUM_RPC_URL, DAI_ADDR, OPTIMISM_L1_ESCROW, OPTIMISM_RPC_URL, TRANSFER_EVENT } from "./utils";
 import { TestTransactionEvent } from "forta-agent-tools/lib/test";
 import { createAddress } from "forta-agent-tools";
 import { escrowsBalance } from "./L1DAI";
@@ -38,7 +38,7 @@ describe("Invariant violation monitor", () => {
 
   beforeAll(() => {
     events = new Interface([TRANSFER_EVENT]);
-    handleTransaction = provideHandleTransaction(TRANSFER_EVENT);
+    handleTransaction = provideHandleTransaction(TRANSFER_EVENT, OPTIMISM_RPC_URL, ARBITRUM_RPC_URL);
   });
 
   it("should return 0 findings if transfer event is not emitted", async () => {
@@ -81,7 +81,7 @@ describe("Invariant violation monitor", () => {
 
   it("should return 1 finding when event is emitted by DAI and is for one of the escrows", async () => {
     let { optBalance, arbBalance } = await escrowsBalance();
-    let arbSupply = await arbitrumSupply();
+    let arbSupply = await arbitrumSupply(ARBITRUM_RPC_URL);
     let findings: Finding[];
     let txEvent: TestTransactionEvent;
 
@@ -104,8 +104,8 @@ describe("Invariant violation monitor", () => {
 
   it("should return 2 findings when event is emitted by DAI and is for both escrows", async () => {
     let { optBalance, arbBalance } = await escrowsBalance();
-    let arbSupply = await arbitrumSupply();
-    let optSupply = await optimismSupply();
+    let arbSupply = await arbitrumSupply(ARBITRUM_RPC_URL);
+    let optSupply = await optimismSupply(OPTIMISM_RPC_URL);
 
     let findings: Finding[];
     let txEvent: TestTransactionEvent;

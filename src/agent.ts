@@ -9,9 +9,9 @@ import {
 import { escrowsBalance } from "./L1DAI";
 import { arbitrumSupply, optimismSupply } from "./L2DAI";
 
-import { ARBITRUM_L1_ESCROW, DAI_ADDR, OPTIMISM_L1_ESCROW, TRANSFER_EVENT } from "./utils";
+import { ARBITRUM_L1_ESCROW, ARBITRUM_RPC_URL, DAI_ADDR, OPTIMISM_L1_ESCROW, OPTIMISM_RPC_URL, TRANSFER_EVENT } from "./utils";
 
-export function provideHandleTransaction(transferEvent: string): HandleTransaction {
+export function provideHandleTransaction(transferEvent: string, optRPCURL: string, arbRPCURL: string): HandleTransaction {
   return async (txEvent: TransactionEvent): Promise<Finding[]> => {
     const findings: Finding[] = [];
 
@@ -25,8 +25,8 @@ export function provideHandleTransaction(transferEvent: string): HandleTransacti
           _to.toLowerCase() === OPTIMISM_L1_ESCROW.toLowerCase()
         ) {
           let { optBalance, arbBalance } = await escrowsBalance();
-          let arbSupply = await arbitrumSupply();
-          let optSupply = await optimismSupply();
+          let arbSupply = await arbitrumSupply(arbRPCURL);
+          let optSupply = await optimismSupply(optRPCURL);
           let escrowAddr: string = "";
           let l2Network: string = "";
           let exceededAmount: string = "";
@@ -68,5 +68,5 @@ export function provideHandleTransaction(transferEvent: string): HandleTransacti
 }
 
 export default {
-  handleTransaction: provideHandleTransaction(TRANSFER_EVENT),
+  handleTransaction: provideHandleTransaction(TRANSFER_EVENT, OPTIMISM_RPC_URL, ARBITRUM_RPC_URL),
 };
